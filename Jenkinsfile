@@ -35,9 +35,7 @@ pipeline {
 
         // Deploy stage 
         stage("deploy to ec2") {
-            when {
-                branch 'main'
-            }
+            
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sshagent(credentials: ['ec2-key']) {
