@@ -1,46 +1,47 @@
-pipeline {
-    agent any
-   
-    environment {
-        registry = "docker.io"
-        reponame = "believeer"
-        appname = "ci-cd"
-        env = "prod"
-    }
+    pipeline {
+        agent any
     
-    stages {
-        // Build Stage
-        stage('build') {
-            steps {
-                sh """
-                    docker build -t $registry/$reponame/$appname:$BUILD_NUMBER .
-                    docker images
-                """
-            }
+        environment {
+            registry = "docker.io"
+            reponame = "believeer"
+            appname = "ci-cd"
+            env = "prod"
         }
-
-        stage('push Image') {
-            when {
-                environment name: 'env', value: 'prod'
-            }
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+        
+        stages {
+            // Build Stage
+            stage('build') {
+                steps {
                     sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin docker.io
-                        docker push $registry/$reponame/$appname:$BUILD_NUMBER
+                        docker build -t $registry/$reponame/$appname:$BUILD_NUMBER .
+                        docker images
                     """
                 }
             }
-        }
 
-        // Deploy stage 
-        stage("deploy to ec2") {
-            
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sshagent(credentials: ['ec2-key']) {
+            stage('push Image') {
+                when {
+                    environment name: 'env', value: 'prod'
+                }
+                steps {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ec2-user@3.125.41.243 '
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin docker.io
+                            docker push $registry/$reponame/$appname:$BUILD_NUMBER
+                        """
+                    }
+                }
+            }
+
+            // Deploy stage 
+            stage("deploy to ec2") {
+                steps {
+                    withCredentials([
+                        usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+                        sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')
+                    ]) {
+                        sh """
+                            ssh -i \$SSH_KEY -o StrictHostKeyChecking=no \$SSH_USER@3.125.41.243 '
                                 set -euo pipefail
                 
                                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin docker.io
@@ -57,12 +58,11 @@ pipeline {
                                 docker ps | grep $appname
                                 
                                 curl -f http://localhost || exit 1
-                                echo "deployed successfully "
+                                echo "deployed successfully"
                             '
                         """
                     }
                 }
-            }
-        } 
+            } 
+        }
     }
-}
