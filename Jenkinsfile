@@ -41,10 +41,10 @@
                         sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')
                     ]) {
                         sh """
-                            ssh -i "\$SSH_KEY" -o StrictHostKeyChecking=no \$SSH_USER@54.93.200.200   '
+                            ssh -i "\$SSH_KEY" -o StrictHostKeyChecking=no \$SSH_USER@54.93.200.200 "
                                 set -euo pipefail
                 
-                                echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin docker.io
+                                echo '$DOCKER_PASS' | docker login -u '$DOCKER_USER' --password-stdin docker.io
                                 
                                 docker pull $registry/$reponame/$appname:$BUILD_NUMBER
 
@@ -58,8 +58,8 @@
                                 docker ps | grep $appname
                                 
                                 curl -f http://localhost || exit 1
-                                echo "deployed successfully"
-                            '
+                                echo 'deployed successfully'
+                            "
                         """
                     }
                 }
