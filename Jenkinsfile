@@ -53,7 +53,13 @@ pipeline {
                                 docker rm $appname || true
 
                                 docker run -p 80:80 -d --name $appname $registry/$reponame/$appname:$BUILD_NUMBER
-                                docker ps
+                                
+                                sleep 5
+                                
+                                docker ps | grep $appname
+                                
+                                curl -f http://localhost || exit 1
+                                echo "deployed successfully "
                             '
                         """
                     }
